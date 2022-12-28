@@ -2,9 +2,6 @@ import cv2
 import numpy as np
 import NDIlib as ndi
 
-# Define the name of the NDI source you want to receive from, the name of the NDI destination you want to send to, and the color filter bounds
-source_name = "My NDI Source"
-destination_name = "My Filtered NDI Stream"
 lower_bound = np.array([0, 100, 100])
 upper_bound = np.array([10, 255, 255])
 
@@ -19,7 +16,7 @@ if ndi_find is None:
 sources = []
 while not len(sources) > 0:
     print('Looking for sources ...')
-    ndi.find_wait_for_sources(ndi_find, 1000)
+    ndi.find_wait_for_sources(ndi_find, 3000)
     sources = ndi.find_get_current_sources(ndi_find)
 
 ndi_recv_create = ndi.RecvCreateV3()
@@ -30,6 +27,8 @@ ndi_recv = ndi.recv_create_v3(ndi_recv_create)
 if ndi_recv is None:
     exit()
 
+for i, s in enumerate(sources):
+    print('%s. %s' % (i + 1, s.ndi_name))
 ndi.recv_connect(ndi_recv, sources[0])
 
 ndi.find_destroy(ndi_find)
@@ -39,10 +38,10 @@ ndi_send = ndi.send_create()
 if ndi_send is None:
     exit()
 
-#video_frame = ndi.VideoFrameV2()
-#img = np.zeros((1080, 1920, 4), dtype=np.uint8)
-#video_frame.data = img
-#video_frame.FourCC = ndi.FOURCC_VIDEO_TYPE_BGRX
+video_frame = ndi.VideoFrameV2()
+img = np.zeros((1080, 1920, 4), dtype=np.uint8)
+video_frame.data = img
+video_frame.FourCC = ndi.FOURCC_VIDEO_TYPE_BGRX
 
 
 while True:
@@ -60,8 +59,9 @@ while True:
         # Use the mask to extract only the filtered colors from the frame
         filtered_frame = cv2.bitwise_and(frame, frame, mask=mask)
 
+        video_frame.data = filtered_frame
         # Send the filtered frame to the NDI destination
-        ndi.send_send_video_v2(ndi_send, filtered_frame)
+        ndi.send_send_video_v2(ndi_send, video_frame)
         ndi.recv_free_video_v2(ndi_recv, v)
 
 ndi.recv_destroy(ndi_recv)
