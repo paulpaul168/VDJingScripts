@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import NDIlib as ndi
+import serial
 
 lower_bound = np.array([0, 100, 100])
 upper_bound = np.array([10, 255, 255])
@@ -43,8 +44,23 @@ img = np.zeros((1080, 1920, 4), dtype=np.uint8)
 video_frame.data = img
 video_frame.FourCC = ndi.FOURCC_VIDEO_TYPE_BGRX
 
+# Initialize serial communication
+ser = serial.Serial('COM7', 9600)
 
 while True:
+    # Read serial data
+    line = ser.readline().decode().strip()
+    try:
+        # Parse RGB values from the line
+        r, g, b = map(int, line.split(':')[1].strip().split(','))
+        print(f"Received RGB values: {r}, {g}, {b}")
+        # Update lower and upper bounds based on the received RGB values
+        lower_bound = np.array([r, g, b])
+        upper_bound = np.array([r+10, 255, 255])
+    except:
+        # Ignore badly formatted lines
+        continue
+
     # Receive the next frame from the NDI source
     t, v, _, _ = ndi.recv_capture_v2(ndi_recv, 5000)
     if t == ndi.FRAME_TYPE_VIDEO:
